@@ -1,0 +1,96 @@
+name: Nightly Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        repository: 'mannyamorim/ffmpeg-windows-build-helpers'
+
+    - name: install deps
+      run: sudo apt-get install -y
+        wget
+        ed
+        subversion
+        curl
+        texinfo
+        g++
+        bison
+        flex
+        cvs
+        yasm
+        automake
+        libtool
+        autoconf
+        gcc
+        cmake
+        git
+        make
+        pkg-config
+        zlib1g-dev
+        mercurial
+        unzip
+        pax
+        nasm
+        meson
+        gperf
+        autogen
+        bzip2
+        autoconf-archive
+        p7zip-full
+        ragel
+        python3-distutils
+
+    - name: run build script
+      run: ./cross_compile_ffmpeg.sh
+        --build-ffmpeg-static=y
+        --build-ffmpeg-shared=n
+        --ffmpeg-git-checkout=https://git.ffmpeg.org/ffmpeg.git
+        --ffmpeg-git-checkout-version=master
+        --disable-nonfree=y
+        --build-intel-qsv=y
+        --sandbox-ok=y
+        --build-libmxf=n
+        --build-mp4box=n
+        --build-mplayer=n
+        --build-vlc=n
+        --build-lsw=n
+        --build-ismindex=n
+        --build-dvbtee=n
+        --compiler-flavors=win64
+        --git-get-latest=y
+        --build-x264-with-libav=n
+        --prefer-stable=n
+        --enable-gpl=y
+        --build-dependencies=y
+
+    - name: archive build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ffmpeg
+        path: sandbox/redist/ffmpeg*.7z
+
+    - name: install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SF_SSH_KEY }}
+        name: id_rsa
+        known_hosts: ${{ secrets.SF_KNOWN_HOSTS }}
+
+    - name: get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+    - name: rsync artifacts to SourceForge
+      shell: bash
+      env:
+        DATE: ${{ steps.date.outputs.date }}
+      run: rsync sandbox/redist/ffmpeg*.7z mannyamorim@frs.sourceforge.net:/home/frs/project/ffmpeg-windows-builds/nightly/${DATE}/
