@@ -10,12 +10,24 @@ jobs:
 
     runs-on: ubuntu-20.04
 
+    strategy:
+      matrix:
+        linkage: [static, shared]
+        include:
+          - linkage: static
+            static_build: y
+            shared_build: n
+
+          - linkage: shared
+            static_build: n
+            shared_build: y
+
     steps:
     - uses: actions/checkout@v2
       with:
         repository: 'mannyamorim/ffmpeg-windows-build-helpers'
 
-    - name: install deps
+    - name: Install dependencies
       run: sudo apt-get install -y
         wget
         ed
@@ -49,10 +61,10 @@ jobs:
         ragel
         python3-distutils
 
-    - name: run build script
+    - name: Run build script
       run: ./cross_compile_ffmpeg.sh
-        --build-ffmpeg-static=y
-        --build-ffmpeg-shared=n
+        --build-ffmpeg-static=${{ matrix.static_build }}
+        --build-ffmpeg-shared=${{ matrix.shared_build }}
         --ffmpeg-git-checkout=https://git.ffmpeg.org/ffmpeg.git
         --ffmpeg-git-checkout-version=master
         --disable-nonfree=y
@@ -72,24 +84,24 @@ jobs:
         --enable-gpl=y
         --build-dependencies=y
 
-    - name: archive build artifacts
+    - name: Archive build artifacts
       uses: actions/upload-artifact@v2
       with:
         name: ffmpeg
         path: sandbox/redist/ffmpeg*.7z
 
-    - name: install SSH key
+    - name: Install SSH key
       uses: shimataro/ssh-key-action@v2
       with:
         key: ${{ secrets.SF_SSH_KEY }}
         name: id_rsa
         known_hosts: ${{ secrets.SF_KNOWN_HOSTS }}
 
-    - name: get current date
+    - name: Get current date
       id: date
       run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
 
-    - name: rsync artifacts to SourceForge
+    - name: Rsync artifacts to SourceForge
       shell: bash
       env:
         DATE: ${{ steps.date.outputs.date }}
