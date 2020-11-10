@@ -1,0 +1,91 @@
+name: Test Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        linkage: [static, shared]
+        include:
+          - linkage: static
+            static_build: y
+            shared_build: n
+
+          - linkage: shared
+            static_build: n
+            shared_build: y
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        repository: 'mannyamorim/ffmpeg-windows-build-helpers'
+        ref: 'testing'
+
+    - name: Install dependencies
+      run: sudo apt-get install -y
+        wget
+        ed
+        subversion
+        curl
+        texinfo
+        g++
+        bison
+        flex
+        cvs
+        yasm
+        automake
+        libtool
+        autoconf
+        gcc
+        cmake
+        git
+        make
+        pkg-config
+        zlib1g-dev
+        mercurial
+        unzip
+        pax
+        nasm
+        meson
+        gperf
+        autogen
+        bzip2
+        autoconf-archive
+        p7zip-full
+        ragel
+        python3-distutils
+
+    - name: Run build script
+      run: ./cross_compile_ffmpeg.sh
+        --build-ffmpeg-static=${{ matrix.static_build }}
+        --build-ffmpeg-shared=${{ matrix.shared_build }}
+        --ffmpeg-git-checkout=https://git.ffmpeg.org/ffmpeg.git
+        --ffmpeg-git-checkout-version=master
+        --disable-nonfree=y
+        --build-intel-qsv=y
+        --sandbox-ok=y
+        --build-libmxf=n
+        --build-mp4box=n
+        --build-mplayer=n
+        --build-vlc=n
+        --build-lsw=n
+        --build-ismindex=n
+        --build-dvbtee=n
+        --compiler-flavors=win64
+        --git-get-latest=y
+        --build-x264-with-libav=n
+        --prefer-stable=n
+        --enable-gpl=y
+        --build-dependencies=y
+
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ffmpeg
+        path: sandbox/redist/ffmpeg*.7z
+
